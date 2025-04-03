@@ -45,9 +45,12 @@ def fetch_football_to_gcs():
     blob = bucket.blob(file_name)
     blob.upload_from_string(json.dumps(match_data), content_type="application/json")
 
+    # Publish to Pub/Sub with logging
     message_data = json.dumps({"gcs_path": f"gs://{BUCKET_NAME}/{file_name}"}).encode("utf-8")
+    print(f"Preparing to publish to {topic_path}: {message_data.decode('utf-8')}")
     future = publisher.publish(topic_path, message_data)
-    future.result()
+    message_id = future.result()  # Wait for publish to complete
+    print(f"Published message ID: {message_id}")
 
     return "Football data saved to GCS and published to Pub/Sub", 200
 
