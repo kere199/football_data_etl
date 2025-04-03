@@ -5,6 +5,9 @@ from google.cloud import storage
 from google.cloud import pubsub_v1
 from google.cloud import secretmanager
 from datetime import datetime, timedelta
+from flask import Flask, request
+
+app = Flask(__name__)
 
 PROJECT_ID = "vital-cathode-454012-k0"
 BUCKET_NAME = "football-data-lake-kere"
@@ -21,8 +24,9 @@ def access_secret(secret_id: str, project_id: str) -> str:
     response = client.access_secret_version(request={"name": secret_name})
     return response.payload.data.decode("UTF-8")
 
-def fetch_football_to_gcs(event, context):
-    api_key = access_secret("b0e602a67fbb4441ab2127b5fda43223", PROJECT_ID)
+@app.route('/', methods=['POST'])
+def fetch_football_to_gcs():
+    api_key = access_secret("football-data-api-key", PROJECT_ID)
     headers = {"X-Auth-Token": api_key}
 
     today = datetime.utcnow()
@@ -34,7 +38,7 @@ def fetch_football_to_gcs(event, context):
     response = requests.get(url, headers=headers)
     match_data = response.json()
 
-    ingestion_timestamp = context.timestamp
+    ingestion_timestamp = datetime.utcnow().isoformat() + "Z"  # Manual timestamp since no context
     match_data["ingestion_timestamp"] = ingestion_timestamp
 
     file_name = f"matches/pl/{ingestion_timestamp.replace(':', '-')}.json"
@@ -46,3 +50,7 @@ def fetch_football_to_gcs(event, context):
     future.result()
 
     return "Football data saved to GCS and published to Pub/Sub", 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
