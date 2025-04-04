@@ -30,7 +30,7 @@ def fetch_football_to_gcs():
     headers = {"X-Auth-Token": api_key}
 
     today = datetime.utcnow()
-    yesterday = today - timedelta(days=1)
+    yesterday = today - timedelta(days=30)
     date_from = yesterday.strftime("%Y-%m-%d")
     date_to = today.strftime("%Y-%m-%d")
 
